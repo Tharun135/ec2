@@ -5,6 +5,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
+
     return "Hello, Your Flask app is running on EC2 🚀"
 
 if __name__ == "__main__":
