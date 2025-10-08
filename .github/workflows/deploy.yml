@@ -3,33 +3,24 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - main  # triggers when you push to main
+      - main  # Trigger only on pushes to main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout repo
+      uses: actions/checkout@v3
 
-      - name: Copy files to EC2
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "."
-          target: "/home/ubuntu/ec2"
+    - name: Copy files to EC2
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_KEY }}
+        port: 22
+        source: "."
+        target: "/home/ubuntu/ec2"  # Change if your app is in a different folder
+        strip_components: 1
 
-      - name: Restart Gunicorn
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd /home/ubuntu/ec2
-            source venv/bin/activate
-            sudo pkill gunicorn || true
-            gunicorn -w 4 -b 0.0.0.0:5000 main:app &
