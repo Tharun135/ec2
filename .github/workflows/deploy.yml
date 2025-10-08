@@ -1,26 +1,30 @@
 name: Deploy to EC2
-
 on:
   push:
     branches:
-      - main  # Trigger only on pushes to main
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+    permissions:
+      id-token: write
+      contents: read
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Copy files to EC2
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ubuntu
-        key: ${{ secrets.EC2_KEY }}
-        port: 22
-        source: "."
-        target: "/home/ubuntu/ec2"  # Change if your app is in a different folder
-        strip_components: 1
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
+
+      - name: Deploy to EC2
+        run: |
+          aws ssm send-command \
+            --instance-ids i-0dbafbf9814fb431d \
+            --document-name "AWS-RunShellScript" \
+            --comment "GitHub Actions Deployment" \
+            --parameters 'commands=["echo Deployment from GitHub Actions complete!"]'
