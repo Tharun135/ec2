@@ -14,31 +14,31 @@ jobs:
       contents: read
 
     steps:
-    # Step 1: Configure AWS credentials using OIDC
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-        aws-region: ${{ secrets.AWS_REGION }}
+      # Step 1: Checkout code (optional, if you need the repo locally in workflow)
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    # Step 2: Deploy repo to EC2 using SSM
-    - name: Deploy repository to EC2
-      run: |
-        INSTANCE_ID="i-0dbafbf9814fb431d"
+      # Step 2: Configure AWS credentials using OIDC
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-        aws ssm send-command \
-          --targets "Key=instanceIds,Values=$INSTANCE_ID" \
-          --document-name "AWS-RunShellScript" \
-          --comment "Deploy latest GitHub repo" \
-          --parameters 'commands=[
-            # Go to deployment folder or create it
-            "mkdir -p ~/app && cd ~/app",
-            # If repo exists, reset it to latest main
-            "if [ -d .git ]; then git fetch --all && git reset --hard origin/main; else git clone https://github.com/Tharun135/ec2.git .; fi",
-            # Install Python dependencies if requirements.txt exists
-            "if [ -f requirements.txt ]; then pip3 install -r requirements.txt; fi",
-            # Optional: restart Flask app
-            "pkill -f 'python3 main.py' || true",
-            "nohup python3 main.py > app.log 2>&1 &"
-          ]' \
-          --region ${{ secrets.AWS_REGION }}
+      # Step 3: Pull latest repo on EC2 using SSM
+      - name: Deploy repository to EC2
+        run: |
+          INSTANCE_ID="i-0dbafbf9814fb431d"
+
+          aws ssm send-command \
+            --targets "Key=instanceIds,Values=$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy latest GitHub repo" \
+            --parameters 'commands=[
+              "mkdir -p ~/app && cd ~/app",
+              "if [ -d .git ]; then git fetch --all && git reset --hard origin/main; else git clone https://github.com/Tharun135/ec2.git .; fi",
+              "if [ -f requirements.txt ]; then pip3 install -r requirements.txt; fi",
+              "pkill -f \"python3 main.py\" || true",
+              "nohup python3 main.py > app.log 2>&1 &"
+            ]' \
+            --region ${{ secrets.AWS_REGION }}
