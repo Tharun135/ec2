@@ -14,34 +14,32 @@ jobs:
       contents: read
 
     steps:
-    # Step 1: Checkout the repository
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      # Step 1: Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    # Step 2: Configure AWS credentials using OIDC
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-        aws-region: ${{ secrets.AWS_REGION }}
+      # Step 2: Configure AWS credentials using OIDC
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-    # Step 3: Deploy repo to EC2 via SSM
-    - name: Deploy repo to EC2
-      run: |
-        INSTANCE_ID="i-0dbafbf9814fb431d"
-        aws ssm send-command \
-          --targets "Key=instanceIds,Values=$INSTANCE_ID" \
-          --document-name "AWS-RunShellScript" \
-          --comment "Deploy latest GitHub repo" \
-          --parameters 'commands=[
-            "mkdir -p /home/ubuntu/app",
-            "cd /home/ubuntu/app",
-            "if [ -d .git ]; then git fetch --all && git reset --hard origin/main; else git clone https://github.com/Tharun135/ec2.git .; fi",
-            "source /home/ubuntu/venv/bin/activate",
-            "pip install -r requirements.txt",
-            "pkill -f main.py || true",
-            "nohup python3 main.py > app.log 2>&1 &"
-          ]' \
-          --region ${{ secrets.AWS_REGION }} \
-          --comment "Deploy repo as ubuntu user" \
-          --execution-user "ubuntu"
+      # Step 3: Deploy repo to EC2 via SSM
+      - name: Deploy repo to EC2
+        run: |
+          INSTANCE_ID="i-0dbafbf9814fb431d"
+          aws ssm send-command \
+            --targets "Key=instanceIds,Values=$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy latest GitHub repo" \
+            --parameters 'commands=[
+              "sudo -u ubuntu mkdir -p /home/ubuntu/app",
+              "cd /home/ubuntu/app",
+              "sudo -u ubuntu git fetch --all && sudo -u ubuntu git reset --hard origin/main || sudo -u ubuntu git clone https://github.com/Tharun135/ec2.git .",
+              "source /home/ubuntu/venv/bin/activate",
+              "pip install -r requirements.txt",
+              "pkill -f main.py || true",
+              "nohup python3 main.py > app.log 2>&1 &"
+            ]' \
+            --region ${{ secrets.AWS_REGION }}
